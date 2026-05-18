@@ -8,6 +8,7 @@ import SponsorStatements from "@/src/components/ManagerStatements";
 import MorningWire from "@/src/components/MorningWire";
 import Navbar, { type Role } from "@/src/components/Navbar";
 import PositionInputs from "@/src/components/PositionInputs";
+import RedemptionManager from "@/src/components/RedemptionManager";
 import StressEngine from "@/src/components/StressEngine";
 import Validation from "@/src/components/Validation";
 import { CLIENTS, INP, type FundInputs } from "@/src/lib/data";
@@ -48,6 +49,7 @@ export default function Home() {
           <MorningWire inputs={inputs} />
           <PositionInputs inputs={inputs} setInputs={setInputs} />
           <StressEngine inputs={inputs} />
+          <RedemptionManager inputs={inputs} />
           <ClientRegistry />
           <SponsorStatements />
           <Validation inputs={inputs} />
