@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+:root {
+  --fund-background-primary: #ffffff;
+  --fund-background-secondary: #f7f7f5;
+  --fund-background-tertiary: #f0efe9;
+  --fund-background-success: #eaf3de;
+  --fund-background-warning: #faeeda;
+  --fund-background-danger: #fcebeb;
+  --fund-background-info: #e6f1fb;
+
+  --fund-text-primary: #1a1a18;
+  --fund-text-secondary: #6b6b67;
+  --fund-text-success: #3b6d11;
+  --fund-text-warning: #633806;
+  --fund-text-danger: #a32d2d;
+  --fund-text-info: #185fa5;
+
+  --fund-border-subtle: rgb(0 0 0 / 0.09);
+  --fund-border-strong: rgb(0 0 0 / 0.18);
+  --fund-border-prominent: rgb(0 0 0 / 0.32);
+  --fund-border-success: rgb(59 109 17 / 0.28);
+  --fund-border-warning: rgb(99 56 6 / 0.28);
+  --fund-border-danger: rgb(163 45 45 / 0.28);
+
+  --fund-radius-md: 8px;
+  --fund-radius-lg: 12px;
+  --fund-dashboard-max-width: 1200px;
+
+  --background: var(--fund-background-tertiary);
+  --foreground: var(--fund-text-primary);
+
+  --bp: var(--fund-background-primary);
+  --bs: var(--fund-background-secondary);
+  --bt: var(--fund-background-tertiary);
+  --bsuc: var(--fund-background-success);
+  --bwrn: var(--fund-background-warning);
+  --bdan: var(--fund-background-danger);
+  --binf: var(--fund-background-info);
+  --tp: var(--fund-text-primary);
+  --ts: var(--fund-text-secondary);
+  --tsuc: var(--fund-text-success);
+  --twrn: var(--fund-text-warning);
+  --tdan: var(--fund-text-danger);
+  --tinf: var(--fund-text-info);
+  --bort: var(--fund-border-subtle);
+  --bors: var(--fund-border-strong);
+  --borp: var(--fund-border-prominent);
+  --borsuc: var(--fund-border-success);
+  --borwrn: var(--fund-border-warning);
+  --bordan: var(--fund-border-danger);
+  --rmd: var(--fund-radius-md);
+  --rlg: var(--fund-radius-lg);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface-primary: var(--fund-background-primary);
+  --color-surface-secondary: var(--fund-background-secondary);
+  --color-surface-tertiary: var(--fund-background-tertiary);
+  --color-surface-success: var(--fund-background-success);
+  --color-surface-warning: var(--fund-background-warning);
+  --color-surface-danger: var(--fund-background-danger);
+  --color-surface-info: var(--fund-background-info);
+  --color-text-primary: var(--fund-text-primary);
+  --color-text-secondary: var(--fund-text-secondary);
+  --color-text-success: var(--fund-text-success);
+  --color-text-warning: var(--fund-text-warning);
+  --color-text-danger: var(--fund-text-danger);
+  --color-text-info: var(--fund-text-info);
+  --color-border-subtle: var(--fund-border-subtle);
+  --color-border-strong: var(--fund-border-strong);
+  --color-border-prominent: var(--fund-border-prominent);
+  --color-border-success: var(--fund-border-success);
+  --color-border-warning: var(--fund-border-warning);
+  --color-border-danger: var(--fund-border-danger);
+  --radius-fund-md: var(--fund-radius-md);
+  --radius-fund-lg: var(--fund-radius-lg);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fund-background-primary: #1e1e1c;
+    --fund-background-secondary: #282826;
+    --fund-background-tertiary: #222220;
+    --fund-background-success: #173404;
+    --fund-background-warning: #3a2000;
+    --fund-background-danger: #3e1010;
+    --fund-background-info: #041f44;
+
+    --fund-text-primary: #eeeee8;
+    --fund-text-secondary: #9a9a94;
+    --fund-text-success: #97c459;
+    --fund-text-warning: #fac775;
+    --fund-text-danger: #f09595;
+    --fund-text-info: #85b7eb;
+
+    --fund-border-subtle: rgb(255 255 255 / 0.09);
+    --fund-border-strong: rgb(255 255 255 / 0.16);
+    --fund-border-prominent: rgb(255 255 255 / 0.26);
+    --fund-border-success: rgb(151 196 89 / 0.28);
+    --fund-border-warning: rgb(250 199 117 / 0.28);
+    --fund-border-danger: rgb(240 149 149 / 0.28);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 14px;
+  min-height: 100%;
+}
+
+input,
+select,
+textarea,
+button {
+  color: var(--foreground);
+  font: inherit;
+}
