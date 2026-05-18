@@ -26,30 +26,37 @@ export type FundInputs = {
   opexAnn: FundInput<number>;
   payStatus: FundInput<PayStatus>;
   impairRecov: FundInput<number>;
+  investorSplitPct: FundInput<number>;
 };
 
 export type InputKey = keyof FundInputs;
 
-export type InvestorColor = "purple" | "teal" | "blue" | "coral" | "amber" | "pink";
+export type ClientColor = "purple" | "teal" | "blue" | "coral" | "amber" | "pink";
 
-export type InvestorStatus = "active" | "pending" | "rejected" | "queued";
+export type ClientStatus = "active" | "pending" | "rejected" | "queued";
 
-export type Investor = {
+export type Client = {
   id: number;
   name: string;
   email: string;
   in: string;
-  col: InvestorColor;
+  col: ClientColor;
   principal: number;
   rate: number;
   subDate: string;
-  status: InvestorStatus;
+  status: ClientStatus;
 };
+
+export type InvestorColor = ClientColor;
+export type InvestorStatus = ClientStatus;
+export type Investor = Client;
 
 export type TransactionType = "subscription" | "interest" | "redemption";
 
 export type Transaction = {
   id: number;
+  clientId: number;
+  /** @deprecated Use clientId. */
   iid: number;
   type: TransactionType;
   amount: number;
@@ -69,6 +76,8 @@ export type RedemptionStatus =
 
 export type Redemption = {
   id: number;
+  clientId: number;
+  /** @deprecated Use clientId. */
   iid: number;
   amount: number;
   requested: string;
@@ -88,12 +97,12 @@ export type Sponsor = {
 
 export type Freshness = "fresh" | "stale" | "old";
 
-export type InvestorColorToken = {
+export type ClientColorToken = {
   bg: string;
   tx: string;
 };
 
-export const CL: Record<InvestorColor, InvestorColorToken> = {
+export const CL: Record<ClientColor, ClientColorToken> = {
   purple: { bg: "#EEEDFE", tx: "#3C3489" },
   teal: { bg: "#E1F5EE", tx: "#085041" },
   blue: { bg: "#E6F1FB", tx: "#0C447C" },
@@ -102,7 +111,7 @@ export const CL: Record<InvestorColor, InvestorColorToken> = {
   pink: { bg: "#FBEAF0", tx: "#72243E" },
 };
 
-export const CK = Object.keys(CL) as InvestorColor[];
+export const CK = Object.keys(CL) as ClientColor[];
 
 const NOW = new Date().toISOString();
 const H24 = new Date(Date.now() - 25 * 3_600_000).toISOString();
@@ -199,9 +208,16 @@ export const INP: FundInputs = {
     unit: "%",
     note: "Economic income recovery rate when impaired (0-100%)",
   },
+  investorSplitPct: {
+    v: 70,
+    ts: NOW,
+    label: "Investor profit split",
+    unit: "%",
+    note: "Investor Capital waterfall share; Sponsor Investment Capital remains 100% sponsor-owned",
+  },
 };
 
-export const INVESTORS: Investor[] = [
+export const CLIENTS: Client[] = [
   {
     id: 1,
     name: "James Delgado",
@@ -259,37 +275,41 @@ export const INVESTORS: Investor[] = [
   },
 ];
 
+/** @deprecated Fixed-yield account holders are now Clients. Use CLIENTS. */
+export const INVESTORS = CLIENTS;
+
 export const TXNS: Transaction[] = [
-  { id: 1, iid: 1, type: "subscription", amount: 1_500_000, date: "2022-03-15", ref: "SUB-001", notes: "Initial principal funded" },
-  { id: 2, iid: 2, type: "subscription", amount: 800_000, date: "2022-06-01", ref: "SUB-002", notes: "Initial principal funded" },
-  { id: 3, iid: 3, type: "subscription", amount: 1_200_000, date: "2022-01-20", ref: "SUB-003", notes: "Initial principal funded" },
-  { id: 4, iid: 4, type: "subscription", amount: 800_000, date: "2023-02-10", ref: "SUB-004", notes: "Initial principal funded" },
-  { id: 5, iid: 5, type: "subscription", amount: 700_000, date: "2023-08-05", ref: "SUB-005", notes: "Initial principal funded" },
-  { id: 6, iid: 1, type: "interest", amount: 11_250, date: "2024-01-31", ref: "INT-2024-01", notes: "Jan 2024 interest at 9%" },
-  { id: 7, iid: 2, type: "interest", amount: 6_000, date: "2024-01-31", ref: "INT-2024-01", notes: "Jan 2024 interest at 9%" },
-  { id: 8, iid: 3, type: "interest", amount: 9_000, date: "2024-01-31", ref: "INT-2024-01", notes: "Jan 2024 interest at 9%" },
-  { id: 9, iid: 4, type: "interest", amount: 6_333, date: "2024-01-31", ref: "INT-2024-01", notes: "Jan 2024 interest at 9.5%" },
-  { id: 10, iid: 5, type: "interest", amount: 5_250, date: "2024-01-31", ref: "INT-2024-01", notes: "Jan 2024 interest at 9%" },
-  { id: 11, iid: 1, type: "interest", amount: 11_250, date: "2024-02-29", ref: "INT-2024-02", notes: "Feb 2024 interest at 9%" },
-  { id: 12, iid: 2, type: "interest", amount: 6_000, date: "2024-02-29", ref: "INT-2024-02", notes: "Feb 2024 interest at 9%" },
-  { id: 13, iid: 3, type: "interest", amount: 9_000, date: "2024-02-29", ref: "INT-2024-02", notes: "Feb 2024 interest at 9%" },
-  { id: 14, iid: 4, type: "interest", amount: 6_333, date: "2024-02-29", ref: "INT-2024-02", notes: "Feb 2024 interest at 9.5%" },
-  { id: 15, iid: 5, type: "interest", amount: 5_250, date: "2024-02-29", ref: "INT-2024-02", notes: "Feb 2024 interest at 9%" },
-  { id: 16, iid: 1, type: "interest", amount: 11_250, date: "2024-03-31", ref: "INT-2024-03", notes: "Mar 2024 interest at 9%" },
-  { id: 17, iid: 2, type: "interest", amount: 6_000, date: "2024-03-31", ref: "INT-2024-03", notes: "Mar 2024 interest at 9%" },
-  { id: 18, iid: 3, type: "interest", amount: 9_000, date: "2024-03-31", ref: "INT-2024-03", notes: "Mar 2024 interest at 9%" },
-  { id: 19, iid: 4, type: "interest", amount: 6_333, date: "2024-03-31", ref: "INT-2024-03", notes: "Mar 2024 interest at 9.5%" },
-  { id: 20, iid: 5, type: "interest", amount: 5_250, date: "2024-03-31", ref: "INT-2024-03", notes: "Mar 2024 interest at 9%" },
+  { id: 1, clientId: 1, iid: 1, type: "subscription", amount: 1_500_000, date: "2022-03-15", ref: "SUB-001", notes: "Initial principal funded" },
+  { id: 2, clientId: 2, iid: 2, type: "subscription", amount: 800_000, date: "2022-06-01", ref: "SUB-002", notes: "Initial principal funded" },
+  { id: 3, clientId: 3, iid: 3, type: "subscription", amount: 1_200_000, date: "2022-01-20", ref: "SUB-003", notes: "Initial principal funded" },
+  { id: 4, clientId: 4, iid: 4, type: "subscription", amount: 800_000, date: "2023-02-10", ref: "SUB-004", notes: "Initial principal funded" },
+  { id: 5, clientId: 5, iid: 5, type: "subscription", amount: 700_000, date: "2023-08-05", ref: "SUB-005", notes: "Initial principal funded" },
+  { id: 6, clientId: 1, iid: 1, type: "interest", amount: 11_250, date: "2024-01-31", ref: "INT-2024-01", notes: "Jan 2024 interest at 9%" },
+  { id: 7, clientId: 2, iid: 2, type: "interest", amount: 6_000, date: "2024-01-31", ref: "INT-2024-01", notes: "Jan 2024 interest at 9%" },
+  { id: 8, clientId: 3, iid: 3, type: "interest", amount: 9_000, date: "2024-01-31", ref: "INT-2024-01", notes: "Jan 2024 interest at 9%" },
+  { id: 9, clientId: 4, iid: 4, type: "interest", amount: 6_333, date: "2024-01-31", ref: "INT-2024-01", notes: "Jan 2024 interest at 9.5%" },
+  { id: 10, clientId: 5, iid: 5, type: "interest", amount: 5_250, date: "2024-01-31", ref: "INT-2024-01", notes: "Jan 2024 interest at 9%" },
+  { id: 11, clientId: 1, iid: 1, type: "interest", amount: 11_250, date: "2024-02-29", ref: "INT-2024-02", notes: "Feb 2024 interest at 9%" },
+  { id: 12, clientId: 2, iid: 2, type: "interest", amount: 6_000, date: "2024-02-29", ref: "INT-2024-02", notes: "Feb 2024 interest at 9%" },
+  { id: 13, clientId: 3, iid: 3, type: "interest", amount: 9_000, date: "2024-02-29", ref: "INT-2024-02", notes: "Feb 2024 interest at 9%" },
+  { id: 14, clientId: 4, iid: 4, type: "interest", amount: 6_333, date: "2024-02-29", ref: "INT-2024-02", notes: "Feb 2024 interest at 9.5%" },
+  { id: 15, clientId: 5, iid: 5, type: "interest", amount: 5_250, date: "2024-02-29", ref: "INT-2024-02", notes: "Feb 2024 interest at 9%" },
+  { id: 16, clientId: 1, iid: 1, type: "interest", amount: 11_250, date: "2024-03-31", ref: "INT-2024-03", notes: "Mar 2024 interest at 9%" },
+  { id: 17, clientId: 2, iid: 2, type: "interest", amount: 6_000, date: "2024-03-31", ref: "INT-2024-03", notes: "Mar 2024 interest at 9%" },
+  { id: 18, clientId: 3, iid: 3, type: "interest", amount: 9_000, date: "2024-03-31", ref: "INT-2024-03", notes: "Mar 2024 interest at 9%" },
+  { id: 19, clientId: 4, iid: 4, type: "interest", amount: 6_333, date: "2024-03-31", ref: "INT-2024-03", notes: "Mar 2024 interest at 9.5%" },
+  { id: 20, clientId: 5, iid: 5, type: "interest", amount: 5_250, date: "2024-03-31", ref: "INT-2024-03", notes: "Mar 2024 interest at 9%" },
 ];
 
 export const REDEMPTIONS: Redemption[] = [
   {
     id: 1,
+    clientId: 2,
     iid: 2,
     amount: 100_000,
     requested: "2024-05-10",
     status: "requested",
-    notes: "Investor request - property purchase",
+    notes: "Client request - property purchase",
     reviewedAt: null,
     approvedAt: null,
     scheduledDate: null,
@@ -299,7 +319,7 @@ export const REDEMPTIONS: Redemption[] = [
 ];
 
 export const SPONSOR: Sponsor = {
-  name: "Fund Manager",
+  name: "Fund Sponsor",
   firstLoss: 500_000,
 };
 
@@ -331,11 +351,14 @@ export const nowStr = () =>
     minute: "2-digit",
   });
 
-export const gi = (id: number, investors: Investor[] = INVESTORS) =>
-  investors.find((investor) => investor.id === id);
+export const getClient = (id: number, clients: Client[] = CLIENTS) =>
+  clients.find((client) => client.id === id);
 
-export const getInvestorAvatarStyle = (investor: Investor, size = 28) => {
-  const colors = CL[investor.col] ?? CL.purple;
+/** @deprecated Use getClient. */
+export const gi = getClient;
+
+export const getClientAvatarStyle = (client: Client, size = 28) => {
+  const colors = CL[client.col] ?? CL.purple;
 
   return {
     width: `${size}px`,
@@ -343,9 +366,12 @@ export const getInvestorAvatarStyle = (investor: Investor, size = 28) => {
     background: colors.bg,
     color: colors.tx,
     fontSize: `${Math.round(size * 0.38)}px`,
-    initials: investor.in,
+    initials: client.in,
   };
 };
+
+/** @deprecated Use getClientAvatarStyle. */
+export const getInvestorAvatarStyle = getClientAvatarStyle;
 
 export function fresh(ts?: string | null): Freshness {
   if (!ts) {

@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 
-import { REDEMPTIONS, fd, fmt, tod, type Investor, type Redemption } from "@/src/lib/data";
+import { REDEMPTIONS, fd, fmt, tod, type Client, type Redemption } from "@/src/lib/data";
 
-type InvestorRedemptionProps = {
-  investor: Investor;
+type ClientRedemptionProps = {
+  client: Client;
 };
 
 const statusClasses = {
@@ -18,20 +18,20 @@ const statusClasses = {
   queued: "bg-surface-info text-text-info",
 };
 
-export default function InvestorRedemption({ investor }: InvestorRedemptionProps) {
+export default function ClientRedemption({ client }: ClientRedemptionProps) {
   const [amount, setAmount] = useState("");
   const [preferredDate, setPreferredDate] = useState("");
   const [note, setNote] = useState("");
   const [submittedRequests, setSubmittedRequests] = useState<Redemption[]>([]);
   const requestedAmount = Number(amount) || 0;
-  const remainingBalance = Math.max(0, investor.principal - requestedAmount);
-  const exceedsPrincipal = requestedAmount > investor.principal;
-  const investorRequests = useMemo(
+  const remainingBalance = Math.max(0, client.principal - requestedAmount);
+  const exceedsPrincipal = requestedAmount > client.principal;
+  const clientRequests = useMemo(
     () =>
-      [...REDEMPTIONS.filter((request) => request.iid === investor.id), ...submittedRequests].sort(
+      [...REDEMPTIONS.filter((request) => request.clientId === client.id), ...submittedRequests].sort(
         (a, b) => b.requested.localeCompare(a.requested),
       ),
-    [investor.id, submittedRequests],
+    [client.id, submittedRequests],
   );
 
   function submitRequest() {
@@ -46,7 +46,8 @@ export default function InvestorRedemption({ investor }: InvestorRedemptionProps
     setSubmittedRequests((current) => [
       {
         id: Date.now(),
-        iid: investor.id,
+        clientId: client.id,
+        iid: client.id,
         amount: requestedAmount,
         requested: tod(),
         status: "requested",
@@ -68,7 +69,7 @@ export default function InvestorRedemption({ investor }: InvestorRedemptionProps
     <section className="mt-5">
       <div className="mb-[3px] text-lg font-medium">Redemption request</div>
       <div className="mb-5 text-[13px] text-text-secondary">
-        Request a full or partial return of your principal. Requests are reviewed by the fund manager.
+        Request a full or partial return of client principal. Requests are reviewed by the sponsor.
       </div>
 
       <div className="mb-5 rounded-fund-lg border border-border-subtle bg-surface-primary p-5">
@@ -79,7 +80,7 @@ export default function InvestorRedemption({ investor }: InvestorRedemptionProps
             <input
               type="number"
               min={0}
-              max={investor.principal}
+              max={client.principal}
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               placeholder="100000"
@@ -100,7 +101,7 @@ export default function InvestorRedemption({ investor }: InvestorRedemptionProps
             <input
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="Any relevant context for the fund manager"
+              placeholder="Any relevant context for the sponsor"
               className="w-full rounded-fund-md border border-border-strong bg-surface-primary px-2.5 py-1.5 text-[13px] text-text-primary outline-none transition-colors focus:border-text-primary"
             />
           </label>
@@ -108,7 +109,7 @@ export default function InvestorRedemption({ investor }: InvestorRedemptionProps
 
         <div className="mt-4 grid gap-2 text-xs text-text-secondary sm:grid-cols-3">
           <div>
-            Principal outstanding: <strong className="text-text-primary">{fmt(investor.principal)}</strong>
+            Principal outstanding: <strong className="text-text-primary">{fmt(client.principal)}</strong>
           </div>
           <div>
             Requested: <strong className={exceedsPrincipal ? "text-text-danger" : "text-text-primary"}>{fmt(requestedAmount)}</strong>
@@ -140,12 +141,12 @@ export default function InvestorRedemption({ investor }: InvestorRedemptionProps
         </div>
       </div>
 
-      {investorRequests.length ? (
+      {clientRequests.length ? (
         <div className="overflow-hidden rounded-fund-lg border border-border-subtle bg-surface-primary">
           <div className="border-b border-border-subtle px-5 py-2.5 text-[13px] font-medium">
             My redemption requests
           </div>
-          {investorRequests.map((request) => (
+          {clientRequests.map((request) => (
             <div key={request.id} className="border-t border-border-subtle px-5 py-3 first:border-t-0">
               <div className="mb-2 flex justify-between">
                 <span className="text-[13px] font-medium">{fmt(request.amount)}</span>

@@ -2,19 +2,19 @@
 
 import {
   CL,
-  INVESTORS,
+  CLIENTS,
   TXNS,
   fd,
   fmt,
   fp,
-  type Investor,
+  type Client,
   type Transaction,
 } from "@/src/lib/data";
-import InvestorRedemption from "@/src/components/InvestorRedemption";
-import InvestorStatement from "@/src/components/InvestorStatement";
+import ClientRedemption from "@/src/components/InvestorRedemption";
+import ClientStatement from "@/src/components/InvestorStatement";
 
-type InvestorDashboardProps = {
-  investorId: number;
+type ClientDashboardProps = {
+  clientId: number;
 };
 
 const transactionBadgeClasses: Record<Transaction["type"], string> = {
@@ -23,8 +23,8 @@ const transactionBadgeClasses: Record<Transaction["type"], string> = {
   redemption: "bg-surface-danger text-text-danger",
 };
 
-function Avatar({ investor, size = 44 }: { investor: Investor; size?: number }) {
-  const colors = CL[investor.col] ?? CL.purple;
+function Avatar({ client, size = 44 }: { client: Client; size?: number }) {
+  const colors = CL[client.col] ?? CL.purple;
 
   return (
     <span
@@ -37,7 +37,7 @@ function Avatar({ investor, size = 44 }: { investor: Investor; size?: number }) 
         fontSize: Math.round(size * 0.38),
       }}
     >
-      {investor.in}
+      {client.in}
     </span>
   );
 }
@@ -72,15 +72,15 @@ function transactionTone(type: Transaction["type"]) {
       : "text-text-success";
 }
 
-export default function InvestorDashboard({ investorId }: InvestorDashboardProps) {
-  const investor = INVESTORS.find((item) => item.id === investorId) ?? INVESTORS[0];
+export default function ClientDashboard({ clientId }: ClientDashboardProps) {
+  const client = CLIENTS.find((item) => item.id === clientId) ?? CLIENTS[0];
   const now = new Date();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const monthProgress = Math.min(now.getDate() / daysInMonth, 1);
-  const monthlyInterest = Math.round(investor.principal * investor.rate / 12);
+  const monthlyInterest = Math.round(client.principal * client.rate / 12);
   const accruedInterest = Math.round(monthlyInterest * monthProgress);
   const nextPayment = new Date(now.getFullYear(), now.getMonth() + 1, 28);
-  const transactions = TXNS.filter((txn) => txn.iid === investor.id).sort((a, b) =>
+  const transactions = TXNS.filter((txn) => txn.clientId === client.id).sort((a, b) =>
     b.date.localeCompare(a.date),
   );
   const interestTransactions = transactions.filter((txn) => txn.type === "interest");
@@ -89,9 +89,9 @@ export default function InvestorDashboard({ investorId }: InvestorDashboardProps
 
   return (
     <section className="p-5">
-      <div className="mb-[3px] text-lg font-medium">Welcome back</div>
+      <div className="mb-[3px] text-lg font-medium">Client Account</div>
       <div className="mb-5 text-[13px] text-text-secondary">
-        Your account as of today,{" "}
+        Your client account as of today,{" "}
         {now.toLocaleDateString("en-US", {
           month: "long",
           day: "numeric",
@@ -101,11 +101,11 @@ export default function InvestorDashboard({ investorId }: InvestorDashboardProps
 
       <div className="mb-5 rounded-fund-lg border border-border-subtle bg-surface-primary p-5">
         <div className="mb-5 flex items-center gap-3">
-          <Avatar investor={investor} />
+          <Avatar client={client} />
           <div>
-            <div className="text-xl font-medium tracking-[-.02em]">{investor.name}</div>
+            <div className="text-xl font-medium tracking-[-.02em]">{client.name}</div>
             <div className="mt-0.5 text-[13px] text-text-secondary">
-              Account opened {fd(investor.subDate)}
+              Client account opened {fd(client.subDate)}
             </div>
           </div>
           <div className="ml-auto text-right">
@@ -118,12 +118,12 @@ export default function InvestorDashboard({ investorId }: InvestorDashboardProps
           <div className="grid sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard
               label="Principal outstanding"
-              value={fmt(investor.principal)}
-              sub="Your funded principal"
+              value={fmt(client.principal)}
+              sub="Client funded principal"
             />
             <MetricCard
               label="Target / stated yield"
-              value={fp(investor.rate)}
+              value={fp(client.rate)}
               sub="Per annum"
             />
             <MetricCard
@@ -267,8 +267,8 @@ export default function InvestorDashboard({ investorId }: InvestorDashboardProps
           </table>
         </div>
       </div>
-      <InvestorRedemption investor={investor} />
-      <InvestorStatement investor={investor} />
+      <ClientRedemption client={client} />
+      <ClientStatement client={client} />
     </section>
   );
 }

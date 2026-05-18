@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import { INVESTORS, fmt, fmts, fp1, fx, type FundInputs, type PayStatus } from "@/src/lib/data";
+import { CLIENTS, fmt, fmts, fp1, fx, type FundInputs, type PayStatus } from "@/src/lib/data";
 import { eng_morningWire, type MorningWireResult } from "@/src/lib/engine";
 
 type StressEngineProps = {
@@ -46,7 +46,7 @@ function cloneInputs(inputs: FundInputs): FundInputs {
 }
 
 function getTotalPrincipal() {
-  return INVESTORS.reduce((sum, investor) => sum + investor.principal, 0);
+  return CLIENTS.reduce((sum, client) => sum + client.principal, 0);
 }
 
 function buildScenarioInputs(inputs: FundInputs, yieldDrop: number, leverageSpike: number) {
@@ -147,7 +147,7 @@ function LiveScenario({ result }: { result: MorningWireResult }) {
           tone={getRiskTone(result.inc.cashICR, 1.5, 1)}
         />
         <ScenarioMetric
-          label="Investor Coverage"
+          label="Client Coverage"
           value={fx(result.postInvCov)}
           sub="After stress"
           tone={getRiskTone(result.postInvCov, 1.1, 1)}
@@ -248,7 +248,7 @@ function SurvivalMatrix({
         </div>
       </div>
       <div className="border-t border-border-subtle px-5 py-2 text-[11px] text-text-secondary">
-        Rows = redemption wave (% of investor principal). Columns = collateral price drop. Sponsor
+        Rows = redemption wave (% of client principal). Columns = collateral price drop. Sponsor
         external liquidity: {fmt(inputs.sponsorLiq.v)}.
       </div>
     </div>

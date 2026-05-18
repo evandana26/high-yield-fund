@@ -1,29 +1,29 @@
 "use client";
 
-import { TXNS, fd, fmt, fp, tod, type Investor } from "@/src/lib/data";
+import { TXNS, fd, fmt, fp, tod, type Client } from "@/src/lib/data";
 
-type InvestorStatementProps = {
-  investor: Investor;
+type ClientStatementProps = {
+  client: Client;
 };
 
-export default function InvestorStatement({ investor }: InvestorStatementProps) {
+export default function ClientStatement({ client }: ClientStatementProps) {
   const year = new Date().getFullYear();
   const from = `${year}-01-01`;
   const to = tod();
   const transactions = TXNS.filter(
-    (txn) => txn.iid === investor.id && txn.date >= from && txn.date <= to,
+    (txn) => txn.clientId === client.id && txn.date >= from && txn.date <= to,
   ).sort((a, b) => a.date.localeCompare(b.date));
   const interestPaid = transactions
     .filter((txn) => txn.type === "interest")
     .reduce((sum, txn) => sum + txn.amount, 0);
-  const monthlyInterest = Math.round(investor.principal * investor.rate / 12);
+  const monthlyInterest = Math.round(client.principal * client.rate / 12);
 
   return (
     <section className="mt-5 rounded-fund-lg border border-border-subtle bg-surface-primary p-6">
       <div className="mb-5 border-b-2 border-border-prominent pb-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-lg font-medium">Investor statement</div>
+            <div className="text-lg font-medium">Client statement</div>
             <div className="mt-0.5 text-xs text-text-secondary">
               {fd(from)} - {fd(to)}
             </div>
@@ -31,13 +31,13 @@ export default function InvestorStatement({ investor }: InvestorStatementProps) 
           <div className="text-right">
             <div className="font-medium">High Yield Fund</div>
             <div className="text-[11px] text-text-secondary">
-              Fixed-rate · {fp(investor.rate)} stated yield p.a.
+              Fixed-rate · {fp(client.rate)} stated yield p.a.
             </div>
           </div>
         </div>
         <div className="mt-3">
-          <div className="text-sm font-medium">{investor.name}</div>
-          <div className="text-xs text-text-secondary">{investor.email}</div>
+          <div className="text-sm font-medium">{client.name}</div>
+          <div className="text-xs text-text-secondary">{client.email}</div>
         </div>
       </div>
 
@@ -46,7 +46,7 @@ export default function InvestorStatement({ investor }: InvestorStatementProps) 
           <div className="mb-[3px] text-[10px] uppercase tracking-[.05em] text-text-secondary">
             Principal outstanding
           </div>
-          <div className="text-[19px] font-medium leading-[1.1]">{fmt(investor.principal)}</div>
+          <div className="text-[19px] font-medium leading-[1.1]">{fmt(client.principal)}</div>
         </div>
         <div className="rounded-fund-md bg-surface-secondary p-3.5">
           <div className="mb-[3px] text-[10px] uppercase tracking-[.05em] text-text-secondary">

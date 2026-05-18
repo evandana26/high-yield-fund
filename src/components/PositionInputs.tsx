@@ -312,6 +312,16 @@ export default function PositionInputs({ inputs, setInputs }: PositionInputsProp
                 });
               }}
             />
+            <NumericControl
+              label="Investor Profit Split (%)"
+              value={inputs.investorSplitPct.v}
+              display={fp1(inputs.investorSplitPct.v / 100)}
+              min={0}
+              max={100}
+              step={1}
+              note="Investor Capital share of the waterfall"
+              onChange={(value) => updateInput(setInputs, "investorSplitPct", value)}
+            />
           </div>
         </div>
       </div>

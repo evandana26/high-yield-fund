@@ -1,9 +1,9 @@
 import {
   INP,
-  INVESTORS,
+  CLIENTS,
   REDEMPTIONS,
+  type Client,
   type FundInputs,
-  type Investor,
   type PayStatus,
   type Redemption,
 } from "./data";
@@ -23,6 +23,8 @@ export type LiabilitiesResult = {
   totalPrincipal: number;
   annualInterest: number;
   monthlyAccrued: number;
+  clientLiabilities: number;
+  /** @deprecated Fixed-yield account holders are clients. Use clientLiabilities. */
   investorLiabilities: number;
 };
 
@@ -59,8 +61,161 @@ export type MorningWireParams = {
   sponsorLiqOverride?: number;
   payStatusOverride?: PayStatus;
   inputs?: FundInputs;
-  investors?: Investor[];
+  clients?: Client[];
+  /** @deprecated Fixed-yield account holders are now clients. Use clients. */
+  investors?: Client[];
   redemptions?: Redemption[];
+  taxLots?: TaxLot[];
+  taxDistributions?: TaxDistribution[];
+  taxSales?: TaxSale[];
+  financingInstruments?: FinancingInstrument[];
+  taxWaterfallConfig?: TaxWaterfallConfig;
+  taxYear?: number;
+};
+
+export type TaxCapitalBucket =
+  | "sponsorInvestmentCapital"
+  | "outsideInvestors"
+  | "customerDeposits";
+
+export type TaxDistributionClassification =
+  | "taxableDividend"
+  | "returnOfCapital"
+  | "interestIncome";
+
+export type TaxLot = {
+  id: string;
+  assetSymbol: string;
+  acquiredDate: string;
+  originalCost: number;
+  quantity: number;
+  capitalBucket: TaxCapitalBucket;
+};
+
+export type TaxDistribution = {
+  id: string;
+  lotId: string;
+  date: string;
+  amount: number;
+  classification: TaxDistributionClassification;
+  capitalBucket?: TaxCapitalBucket;
+};
+
+export type TaxSale = {
+  id: string;
+  lotId: string;
+  date: string;
+  quantity: number;
+  proceeds: number;
+  capitalBucket?: TaxCapitalBucket;
+};
+
+export type FinancingInstrument = {
+  id: string;
+  type: "margin" | "boxSpread";
+  principal: number;
+  annualRate: number;
+  startDate: string;
+  endDate?: string;
+  capitalBucket: TaxCapitalBucket;
+};
+
+export type TaxWaterfallConfig = {
+  outsideInvestorShare: number;
+};
+
+export type AdjustedTaxLot = TaxLot & {
+  adjustedBasis: number;
+  remainingQuantity: number;
+  rocApplied: number;
+};
+
+export type RocCapitalGain = {
+  distributionId: string;
+  lotId: string;
+  assetSymbol: string;
+  date: string;
+  amount: number;
+  term: "shortTerm" | "longTerm";
+  capitalBucket: TaxCapitalBucket;
+};
+
+export type RealizedGainLoss = {
+  saleId: string;
+  lotId: string;
+  assetSymbol: string;
+  date: string;
+  quantitySold: number;
+  proceeds: number;
+  adjustedBasisUsed: number;
+  gainLoss: number;
+  term: "shortTerm" | "longTerm";
+  capitalBucket: TaxCapitalBucket;
+};
+
+export type FinancingAccrual = {
+  instrumentId: string;
+  type: FinancingInstrument["type"];
+  principal: number;
+  annualRate: number;
+  daysAccrued: number;
+  dailyAccrual: number;
+  monthlyEstimate: number;
+  annualEstimate: number;
+  ytdAccrued: number;
+  capitalBucket: TaxCapitalBucket;
+};
+
+export type TaxWaterfallAllocation = {
+  sponsorInvestmentCapital: number;
+  outsideInvestors: number;
+  customerDeposits: number;
+  isolatedCustomerDeposits: number;
+};
+
+export type TaxWaterfallAttribute = {
+  attribute: "taxableDividends" | "rocCapitalGains" | "interestOffsets";
+  sourceAmount: number;
+  allocation: TaxWaterfallAllocation;
+};
+
+export type CpaExportRow = {
+  section: string;
+  lineItem: string;
+  amount: number;
+  bucket: keyof TaxWaterfallAllocation | "fund";
+  notes: string;
+};
+
+export type TaxSummary = {
+  adjustedCostBasis: {
+    lots: AdjustedTaxLot[];
+    rocApplied: number;
+    rocCapitalGains: RocCapitalGain[];
+  };
+  realizedGainLoss: {
+    events: RealizedGainLoss[];
+    shortTerm: number;
+    longTerm: number;
+    net: number;
+  };
+  leverageTracking: {
+    accruals: FinancingAccrual[];
+    dailyMarginInterest: number;
+    monthlyFinancingCosts: number;
+    annualFinancingCosts: number;
+    ytdFinancingCosts: number;
+    blendedFinancingCost: number;
+    byCapitalBucket: Record<TaxCapitalBucket, number>;
+  };
+  taxWaterfall: {
+    taxableDividends: TaxWaterfallAttribute;
+    rocCapitalGains: TaxWaterfallAttribute;
+    interestOffsets: TaxWaterfallAttribute;
+  };
+  netTaxableIncome: number;
+  ytdFinancingCosts: number;
+  cpaExportMatrix: () => CpaExportRow[];
 };
 
 export type MorningWireResult = StructureResult &
@@ -108,6 +263,7 @@ export type MorningWireResult = StructureResult &
     excessLiqAfterCure: number;
     cashSafeForRed: number;
     borrowCapacity: number;
+    tax_summary: TaxSummary;
   };
 
 export function getPendingRedemptionTotal(redemptions: Redemption[] = REDEMPTIONS) {
@@ -135,12 +291,12 @@ export function eng_structure(
 
 export function eng_liabilities(
   principalOverride: number | null = null,
-  investors: Investor[] = INVESTORS,
+  clients: Client[] = CLIENTS,
 ): LiabilitiesResult {
-  const basePrincipal = investors.reduce((sum, investor) => sum + investor.principal, 0);
+  const basePrincipal = clients.reduce((sum, client) => sum + client.principal, 0);
   const totalPrincipal = principalOverride ?? basePrincipal;
-  const baseAnnualInterest = investors.reduce(
-    (sum, investor) => sum + investor.principal * investor.rate,
+  const baseAnnualInterest = clients.reduce(
+    (sum, client) => sum + client.principal * client.rate,
     0,
   );
   const annualInterest =
@@ -148,23 +304,29 @@ export function eng_liabilities(
       ? baseAnnualInterest * (principalOverride / basePrincipal)
       : baseAnnualInterest;
   const monthlyAccrued = annualInterest / 12;
-  const investorLiabilities = totalPrincipal + monthlyAccrued;
+  const clientLiabilities = totalPrincipal + monthlyAccrued;
 
-  return { totalPrincipal, annualInterest, monthlyAccrued, investorLiabilities };
+  return {
+    totalPrincipal,
+    annualInterest,
+    monthlyAccrued,
+    clientLiabilities,
+    investorLiabilities: clientLiabilities,
+  };
 }
 
 export function eng_coverage(
   grossAssets: number,
   marginDebt: number,
   brokerEquity: number,
-  investorLiabilities: number,
+  clientLiabilities: number,
   portMV: number,
 ): CoverageResult {
   const netBeforeInv = brokerEquity;
-  const sponsorEquity = netBeforeInv - investorLiabilities;
+  const sponsorEquity = netBeforeInv - clientLiabilities;
   const tacr =
-    marginDebt + investorLiabilities > 0 ? grossAssets / (marginDebt + investorLiabilities) : 99;
-  const invCov = investorLiabilities > 0 ? netBeforeInv / investorLiabilities : 99;
+    marginDebt + clientLiabilities > 0 ? grossAssets / (marginDebt + clientLiabilities) : 99;
+  const invCov = clientLiabilities > 0 ? netBeforeInv / clientLiabilities : 99;
   const distToImpair = portMV > 0 ? sponsorEquity / portMV : 0;
 
   return { netBeforeInv, sponsorEquity, tacr, invCov, distToImpair };
@@ -220,9 +382,434 @@ export function eng_income(
   };
 }
 
+function daysBetween(startDate: string, endDate: string) {
+  const start = new Date(`${startDate}T00:00:00`).getTime();
+  const end = new Date(`${endDate}T00:00:00`).getTime();
+
+  return Math.max(0, Math.floor((end - start) / 86_400_000));
+}
+
+function isLongTerm(acquiredDate: string, dispositionDate: string) {
+  return daysBetween(acquiredDate, dispositionDate) > 365;
+}
+
+function getYearStart(year: number) {
+  return `${year}-01-01`;
+}
+
+function normalizePct(value: number) {
+  const decimalValue = value > 1 ? value / 100 : value;
+
+  return Math.min(1, Math.max(0, decimalValue));
+}
+
+function getTaxWaterfallConfig(inputs: FundInputs, override?: TaxWaterfallConfig): TaxWaterfallConfig {
+  return {
+    outsideInvestorShare:
+      override?.outsideInvestorShare ?? normalizePct(inputs.investorSplitPct.v),
+  };
+}
+
+function toIsoDate(date: Date) {
+  return date.toISOString().split("T")[0];
+}
+
+function getDefaultTaxLots(inputs: FundInputs): TaxLot[] {
+  const today = toIsoDate(new Date());
+
+  return [
+    {
+      id: "lot-strc",
+      assetSymbol: "STRC",
+      acquiredDate: today,
+      originalCost: inputs.strcMV.v,
+      quantity: 1,
+      capitalBucket: "outsideInvestors",
+    },
+    {
+      id: "lot-sata",
+      assetSymbol: "SATA",
+      acquiredDate: today,
+      originalCost: inputs.sataMV.v,
+      quantity: 1,
+      capitalBucket: "outsideInvestors",
+    },
+  ];
+}
+
+function getDefaultTaxDistributions(inputs: FundInputs): TaxDistribution[] {
+  const today = toIsoDate(new Date());
+
+  return [
+    {
+      id: "dist-strc-taxable-income",
+      lotId: "lot-strc",
+      date: today,
+      amount: inputs.strcInc.v,
+      classification: "taxableDividend",
+      capitalBucket: "outsideInvestors",
+    },
+    {
+      id: "dist-sata-taxable-income",
+      lotId: "lot-sata",
+      date: today,
+      amount: inputs.sataInc.v,
+      classification: "taxableDividend",
+      capitalBucket: "outsideInvestors",
+    },
+  ];
+}
+
+function getDefaultFinancingInstruments(inputs: FundInputs, taxYear: number): FinancingInstrument[] {
+  return [
+    {
+      id: "margin-debt",
+      type: "margin",
+      principal: inputs.marginDebt.v,
+      annualRate: inputs.marginDebt.v > 0 ? inputs.margIntAnn.v / inputs.marginDebt.v : 0,
+      startDate: getYearStart(taxYear),
+      capitalBucket: "outsideInvestors",
+    },
+  ];
+}
+
+function zeroTaxWaterfallAllocation(): TaxWaterfallAllocation {
+  return {
+    sponsorInvestmentCapital: 0,
+    outsideInvestors: 0,
+    customerDeposits: 0,
+    isolatedCustomerDeposits: 0,
+  };
+}
+
+function addTaxWaterfallAllocation(
+  target: TaxWaterfallAllocation,
+  addition: TaxWaterfallAllocation,
+) {
+  target.sponsorInvestmentCapital += addition.sponsorInvestmentCapital;
+  target.outsideInvestors += addition.outsideInvestors;
+  target.customerDeposits += addition.customerDeposits;
+  target.isolatedCustomerDeposits += addition.isolatedCustomerDeposits;
+}
+
+function allocateTaxAttribute(
+  amount: number,
+  capitalBucket: TaxCapitalBucket,
+  config: TaxWaterfallConfig,
+): TaxWaterfallAllocation {
+  if (capitalBucket === "customerDeposits") {
+    return {
+      sponsorInvestmentCapital: 0,
+      outsideInvestors: 0,
+      customerDeposits: 0,
+      isolatedCustomerDeposits: amount,
+    };
+  }
+
+  if (capitalBucket === "sponsorInvestmentCapital") {
+    return {
+      sponsorInvestmentCapital: amount,
+      outsideInvestors: 0,
+      customerDeposits: 0,
+      isolatedCustomerDeposits: 0,
+    };
+  }
+
+  const outsideInvestorShare = normalizePct(config.outsideInvestorShare);
+  const sponsorResidualShare = 1 - outsideInvestorShare;
+
+  return {
+    sponsorInvestmentCapital: amount * sponsorResidualShare,
+    outsideInvestors: amount * outsideInvestorShare,
+    customerDeposits: 0,
+    isolatedCustomerDeposits: 0,
+  };
+}
+
+export function calculateAdjustedCostBasis(
+  taxLots: TaxLot[],
+  taxDistributions: TaxDistribution[],
+  taxSales: TaxSale[] = [],
+) {
+  const lotStates = new Map(
+    taxLots.map((lot) => [
+      lot.id,
+      {
+        ...lot,
+        adjustedBasis: lot.originalCost,
+        remainingQuantity: lot.quantity,
+        rocApplied: 0,
+      },
+    ]),
+  );
+  const rocCapitalGains: RocCapitalGain[] = [];
+  const realizedEvents: RealizedGainLoss[] = [];
+  const events = [
+    ...taxDistributions.map((distribution) => ({
+      kind: "distribution" as const,
+      date: distribution.date,
+      value: distribution,
+    })),
+    ...taxSales.map((sale) => ({
+      kind: "sale" as const,
+      date: sale.date,
+      value: sale,
+    })),
+  ].sort((a, b) => a.date.localeCompare(b.date));
+
+  events.forEach((event) => {
+    if (event.kind === "distribution") {
+      const distribution = event.value;
+      const lot = lotStates.get(distribution.lotId);
+
+      if (!lot || distribution.classification !== "returnOfCapital") {
+        return;
+      }
+
+      const basisReduction = Math.min(lot.adjustedBasis, distribution.amount);
+      const excessRoc = distribution.amount - basisReduction;
+
+      lot.adjustedBasis -= basisReduction;
+      lot.rocApplied += basisReduction;
+
+      if (excessRoc > 0) {
+        rocCapitalGains.push({
+          distributionId: distribution.id,
+          lotId: lot.id,
+          assetSymbol: lot.assetSymbol,
+          date: distribution.date,
+          amount: excessRoc,
+          term: isLongTerm(lot.acquiredDate, distribution.date) ? "longTerm" : "shortTerm",
+          capitalBucket: distribution.capitalBucket ?? lot.capitalBucket,
+        });
+      }
+
+      return;
+    }
+
+    const sale = event.value;
+    const lot = lotStates.get(sale.lotId);
+
+    if (!lot || lot.remainingQuantity <= 0) {
+      return;
+    }
+
+    const quantitySold = Math.min(sale.quantity, lot.remainingQuantity);
+    const saleRatio = quantitySold / lot.remainingQuantity;
+    const adjustedBasisUsed = lot.adjustedBasis * saleRatio;
+    const proceeds = sale.proceeds * (quantitySold / sale.quantity);
+
+    lot.remainingQuantity -= quantitySold;
+    lot.adjustedBasis -= adjustedBasisUsed;
+    realizedEvents.push({
+      saleId: sale.id,
+      lotId: lot.id,
+      assetSymbol: lot.assetSymbol,
+      date: sale.date,
+      quantitySold,
+      proceeds,
+      adjustedBasisUsed,
+      gainLoss: proceeds - adjustedBasisUsed,
+      term: isLongTerm(lot.acquiredDate, sale.date) ? "longTerm" : "shortTerm",
+      capitalBucket: sale.capitalBucket ?? lot.capitalBucket,
+    });
+  });
+
+  return {
+    lots: Array.from(lotStates.values()),
+    rocApplied: Array.from(lotStates.values()).reduce((sum, lot) => sum + lot.rocApplied, 0),
+    rocCapitalGains,
+    realizedEvents,
+  };
+}
+
+export function calculateLeverageTracking(
+  financingInstruments: FinancingInstrument[],
+  taxYear = new Date().getFullYear(),
+) {
+  const today = toIsoDate(new Date());
+  const yearStart = getYearStart(taxYear);
+  const accruals = financingInstruments.map((instrument) => {
+    const accrualStart = instrument.startDate > yearStart ? instrument.startDate : yearStart;
+    const accrualEnd = instrument.endDate && instrument.endDate < today ? instrument.endDate : today;
+    const daysAccrued = daysBetween(accrualStart, accrualEnd) + 1;
+    const dailyAccrual = (instrument.principal * instrument.annualRate) / 365;
+    const ytdAccrued = dailyAccrual * daysAccrued;
+
+    return {
+      instrumentId: instrument.id,
+      type: instrument.type,
+      principal: instrument.principal,
+      annualRate: instrument.annualRate,
+      daysAccrued,
+      dailyAccrual,
+      monthlyEstimate: dailyAccrual * 30,
+      annualEstimate: instrument.principal * instrument.annualRate,
+      ytdAccrued,
+      capitalBucket: instrument.capitalBucket,
+    };
+  });
+  const totalPrincipal = accruals.reduce((sum, accrual) => sum + accrual.principal, 0);
+  const annualFinancingCosts = accruals.reduce((sum, accrual) => sum + accrual.annualEstimate, 0);
+  const byCapitalBucket: Record<TaxCapitalBucket, number> = {
+    sponsorInvestmentCapital: 0,
+    outsideInvestors: 0,
+    customerDeposits: 0,
+  };
+
+  accruals.forEach((accrual) => {
+    byCapitalBucket[accrual.capitalBucket] += accrual.ytdAccrued;
+  });
+
+  return {
+    accruals,
+    dailyMarginInterest: accruals
+      .filter((accrual) => accrual.type === "margin")
+      .reduce((sum, accrual) => sum + accrual.dailyAccrual, 0),
+    monthlyFinancingCosts: accruals.reduce((sum, accrual) => sum + accrual.monthlyEstimate, 0),
+    annualFinancingCosts,
+    ytdFinancingCosts: accruals.reduce((sum, accrual) => sum + accrual.ytdAccrued, 0),
+    blendedFinancingCost: totalPrincipal > 0 ? annualFinancingCosts / totalPrincipal : 0,
+    byCapitalBucket,
+  };
+}
+
+export function generateTaxSummary({
+  inputs = INP,
+  taxLots,
+  taxDistributions,
+  taxSales = [],
+  financingInstruments,
+  taxWaterfallConfig,
+  taxYear = new Date().getFullYear(),
+}: {
+  inputs?: FundInputs;
+  taxLots?: TaxLot[];
+  taxDistributions?: TaxDistribution[];
+  taxSales?: TaxSale[];
+  financingInstruments?: FinancingInstrument[];
+  taxWaterfallConfig?: TaxWaterfallConfig;
+  taxYear?: number;
+} = {}): TaxSummary {
+  const effectiveTaxWaterfallConfig = getTaxWaterfallConfig(inputs, taxWaterfallConfig);
+  const lots = taxLots ?? getDefaultTaxLots(inputs);
+  const distributions = taxDistributions ?? getDefaultTaxDistributions(inputs);
+  const financing = financingInstruments ?? getDefaultFinancingInstruments(inputs, taxYear);
+  const basis = calculateAdjustedCostBasis(lots, distributions, taxSales);
+  const leverageTracking = calculateLeverageTracking(financing, taxYear);
+  const shortTerm = basis.realizedEvents
+    .filter((event) => event.term === "shortTerm")
+    .reduce((sum, event) => sum + event.gainLoss, 0);
+  const longTerm = basis.realizedEvents
+    .filter((event) => event.term === "longTerm")
+    .reduce((sum, event) => sum + event.gainLoss, 0);
+  const taxableDividendAllocation = zeroTaxWaterfallAllocation();
+  const rocCapitalGainAllocation = zeroTaxWaterfallAllocation();
+  const interestOffsetAllocation = zeroTaxWaterfallAllocation();
+  const taxableDividends = distributions
+    .filter((distribution) => distribution.classification === "taxableDividend")
+    .reduce((sum, distribution) => {
+      const lot = lots.find((item) => item.id === distribution.lotId);
+
+      addTaxWaterfallAllocation(
+        taxableDividendAllocation,
+        allocateTaxAttribute(
+          distribution.amount,
+          distribution.capitalBucket ?? lot?.capitalBucket ?? "outsideInvestors",
+          effectiveTaxWaterfallConfig,
+        ),
+      );
+
+      return sum + distribution.amount;
+    }, 0);
+  const rocCapitalGains = basis.rocCapitalGains.reduce((sum, gain) => {
+    addTaxWaterfallAllocation(
+      rocCapitalGainAllocation,
+      allocateTaxAttribute(gain.amount, gain.capitalBucket, effectiveTaxWaterfallConfig),
+    );
+
+    return sum + gain.amount;
+  }, 0);
+
+  leverageTracking.accruals.forEach((accrual) => {
+    addTaxWaterfallAllocation(
+      interestOffsetAllocation,
+      allocateTaxAttribute(accrual.ytdAccrued, accrual.capitalBucket, effectiveTaxWaterfallConfig),
+    );
+  });
+
+  const netRealizedGain = shortTerm + longTerm;
+  const netTaxableIncome =
+    taxableDividends + rocCapitalGains + netRealizedGain - leverageTracking.ytdFinancingCosts;
+
+  return {
+    adjustedCostBasis: {
+      lots: basis.lots,
+      rocApplied: basis.rocApplied,
+      rocCapitalGains: basis.rocCapitalGains,
+    },
+    realizedGainLoss: {
+      events: basis.realizedEvents,
+      shortTerm,
+      longTerm,
+      net: netRealizedGain,
+    },
+    leverageTracking,
+    taxWaterfall: {
+      taxableDividends: {
+        attribute: "taxableDividends",
+        sourceAmount: taxableDividends,
+        allocation: taxableDividendAllocation,
+      },
+      rocCapitalGains: {
+        attribute: "rocCapitalGains",
+        sourceAmount: rocCapitalGains,
+        allocation: rocCapitalGainAllocation,
+      },
+      interestOffsets: {
+        attribute: "interestOffsets",
+        sourceAmount: leverageTracking.ytdFinancingCosts,
+        allocation: interestOffsetAllocation,
+      },
+    },
+    netTaxableIncome,
+    ytdFinancingCosts: leverageTracking.ytdFinancingCosts,
+    cpaExportMatrix: () => [
+      {
+        section: "Income",
+        lineItem: "Taxable dividends",
+        amount: taxableDividends,
+        bucket: "fund",
+        notes: "Estimated taxable dividends before K-1/1099 reconciliation.",
+      },
+      {
+        section: "Basis",
+        lineItem: "ROC capital gains after basis reaches zero",
+        amount: rocCapitalGains,
+        bucket: "fund",
+        notes: "Placeholder CPA export row; final mapping depends on tax preparer format.",
+      },
+      {
+        section: "Financing",
+        lineItem: "YTD financing costs",
+        amount: leverageTracking.ytdFinancingCosts,
+        bucket: "fund",
+        notes: "Includes margin and box spread accruals allocated by capital bucket.",
+      },
+      {
+        section: "Taxable income",
+        lineItem: "Estimated net taxable income",
+        amount: netTaxableIncome,
+        bucket: "fund",
+        notes: "Preliminary estimate for review, not tax advice.",
+      },
+    ],
+  };
+}
+
 export function eng_morningWire(params: MorningWireParams = {}): MorningWireResult {
   const inputs = params.inputs ?? INP;
-  const investors = params.investors ?? INVESTORS;
+  const clients = params.clients ?? params.investors ?? CLIENTS;
   const redemptions = params.redemptions ?? REDEMPTIONS;
   const strcDrop = params.strcDrop ?? 0;
   const sataDrop = params.sataDrop ?? 0;
@@ -277,21 +864,21 @@ export function eng_morningWire(params: MorningWireParams = {}): MorningWireResu
   const postExcessLiq = postBrokerEquity - postMaintReq;
   const postGrossAssets = postPortMV + postBrokerCash;
 
-  const liab = eng_liabilities(null, investors);
+  const liab = eng_liabilities(null, clients);
   const postPrincipal = Math.max(0, liab.totalPrincipal - (useSliderRed ? redemptionNeed : 0));
-  const postLibs = eng_liabilities(postPrincipal, investors);
+  const postLibs = eng_liabilities(postPrincipal, clients);
   const cov = eng_coverage(
     st.grossAssets,
     inputs.marginDebt.v,
     st.brokerEquity,
-    liab.investorLiabilities,
+    liab.clientLiabilities,
     st.portMV,
   );
   const postCov = eng_coverage(
     postGrossAssets,
     postMarginDebt,
     postBrokerEquity,
-    postLibs.investorLiabilities,
+    postLibs.clientLiabilities,
     postPortMV,
   );
   const inc = eng_income(
@@ -318,6 +905,15 @@ export function eng_morningWire(params: MorningWireParams = {}): MorningWireResu
       ? Math.ceil(totalSponsorWire / inc.monthlyExcess)
       : 0;
   const interestShortfall = Math.max(0, -inc.netCash);
+  const tax_summary = generateTaxSummary({
+    inputs,
+    taxLots: params.taxLots,
+    taxDistributions: params.taxDistributions,
+    taxSales: params.taxSales,
+    financingInstruments: params.financingInstruments,
+    taxWaterfallConfig: params.taxWaterfallConfig,
+    taxYear: params.taxYear,
+  });
 
   return {
     strcMV,
@@ -366,5 +962,6 @@ export function eng_morningWire(params: MorningWireParams = {}): MorningWireResu
     excessLiqAfterCure,
     cashSafeForRed,
     borrowCapacity,
+    tax_summary,
   };
 }

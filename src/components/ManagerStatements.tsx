@@ -2,21 +2,21 @@
 
 import { useState } from "react";
 
-import { INVESTORS, TXNS, fd, fmt, fp, tod } from "@/src/lib/data";
+import { CLIENTS, TXNS, fd, fmt, fp, tod } from "@/src/lib/data";
 
 function yearStart() {
   return `${new Date().getFullYear()}-01-01`;
 }
 
-export default function ManagerStatements() {
-  const [investorId, setInvestorId] = useState(INVESTORS[0].id);
+export default function SponsorStatements() {
+  const [clientId, setClientId] = useState(CLIENTS[0].id);
   const [from, setFrom] = useState(yearStart());
   const [to, setTo] = useState(tod());
-  const investor = INVESTORS.find((item) => item.id === investorId) ?? INVESTORS[0];
+  const client = CLIENTS.find((item) => item.id === clientId) ?? CLIENTS[0];
   const transactions = TXNS.filter(
-    (txn) => txn.iid === investor.id && txn.date >= from && txn.date <= to,
+    (txn) => txn.clientId === client.id && txn.date >= from && txn.date <= to,
   ).sort((a, b) => a.date.localeCompare(b.date));
-  const priorTransactions = TXNS.filter((txn) => txn.iid === investor.id && txn.date < from);
+  const priorTransactions = TXNS.filter((txn) => txn.clientId === client.id && txn.date < from);
   const beginningPrincipal =
     priorTransactions
       .filter((txn) => txn.type === "subscription")
@@ -33,11 +33,11 @@ export default function ManagerStatements() {
   const interestPaid = transactions
     .filter((txn) => txn.type === "interest")
     .reduce((sum, txn) => sum + txn.amount, 0);
-  const monthlyInterest = Math.round(investor.principal * investor.rate / 12);
+  const monthlyInterest = Math.round(client.principal * client.rate / 12);
 
   return (
     <section className="px-5 pb-5">
-      <div className="mb-[3px] text-lg font-medium">Investor statements</div>
+      <div className="mb-[3px] text-lg font-medium">Client statements</div>
       <div className="mb-5 text-[13px] text-text-secondary">
         Beginning principal, subscriptions, redemptions, interest paid, accrued, and ending balance.
       </div>
@@ -46,13 +46,13 @@ export default function ManagerStatements() {
         <div className="mb-3.5 text-[13px] font-medium">Generate statement</div>
         <div className="grid gap-3 md:grid-cols-3">
           <label className="flex flex-col gap-[3px]">
-            <span className="text-[11px] font-medium text-text-secondary">Investor</span>
+            <span className="text-[11px] font-medium text-text-secondary">Client</span>
             <select
-              value={investorId}
-              onChange={(event) => setInvestorId(Number(event.target.value))}
+              value={clientId}
+              onChange={(event) => setClientId(Number(event.target.value))}
               className="w-full rounded-fund-md border border-border-strong bg-surface-primary px-2.5 py-1.5 text-[13px] text-text-primary outline-none transition-colors focus:border-text-primary"
             >
-              {INVESTORS.map((item) => (
+              {CLIENTS.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>
@@ -84,7 +84,7 @@ export default function ManagerStatements() {
         <div className="mb-5 border-b-2 border-border-prominent pb-4">
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-lg font-medium">Investor statement</div>
+              <div className="text-lg font-medium">Client statement</div>
               <div className="mt-0.5 text-xs text-text-secondary">
                 {fd(from)} - {fd(to)}
               </div>
@@ -92,13 +92,13 @@ export default function ManagerStatements() {
             <div className="text-right">
               <div className="font-medium">High Yield Fund</div>
               <div className="text-[11px] text-text-secondary">
-                Fixed-rate · {fp(investor.rate)} stated yield p.a.
+                Fixed-rate · {fp(client.rate)} stated yield p.a.
               </div>
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-sm font-medium">{investor.name}</div>
-            <div className="text-xs text-text-secondary">{investor.email}</div>
+            <div className="text-sm font-medium">{client.name}</div>
+            <div className="text-xs text-text-secondary">{client.email}</div>
           </div>
         </div>
 
@@ -107,7 +107,7 @@ export default function ManagerStatements() {
           <Metric label="New principal" value={fmt(newSubscriptions)} tone="success" />
           <Metric label="Redemptions" value={fmt(redemptions)} tone="danger" />
           <Metric label="Interest paid" value={fmt(interestPaid)} tone="success" />
-          <Metric label="Ending principal" value={fmt(investor.principal)} />
+          <Metric label="Ending principal" value={fmt(client.principal)} />
           <Metric label="Accrued this month" value={fmt(monthlyInterest)} />
         </div>
 

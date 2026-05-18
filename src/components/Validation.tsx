@@ -16,7 +16,7 @@ type Check = {
 export default function Validation({ inputs }: ValidationProps) {
   const wire = eng_morningWire({ inputs });
   const reconciliation = Math.abs(
-    wire.grossAssets - inputs.marginDebt.v - wire.investorLiabilities - wire.sponsorEquity,
+    wire.grossAssets - inputs.marginDebt.v - wire.clientLiabilities - wire.sponsorEquity,
   );
   const dailyChecks: Check[] = [
     {
@@ -35,8 +35,8 @@ export default function Validation({ inputs }: ValidationProps) {
       pass: reconciliation < 1,
     },
     {
-      label: "Investor coverage reviewed",
-      detail: `Investor coverage: ${fx(wire.invCov)} · Post-stress: ${fx(wire.postInvCov)}`,
+      label: "Client coverage reviewed",
+      detail: `Client coverage: ${fx(wire.invCov)} · Post-stress: ${fx(wire.postInvCov)}`,
       pass: wire.invCov >= 1,
     },
     {
@@ -68,7 +68,7 @@ export default function Validation({ inputs }: ValidationProps) {
     },
     {
       label: "Sponsor equity absorbs market losses first",
-      detail: `Investor coverage: ${fx(wire.invCov)} · Sponsor equity: ${fmts(wire.sponsorEquity)}`,
+      detail: `Client coverage: ${fx(wire.invCov)} · Sponsor equity: ${fmts(wire.sponsorEquity)}`,
       pass: wire.invCov >= 1 || wire.sponsorEquity < 0,
     },
   ];

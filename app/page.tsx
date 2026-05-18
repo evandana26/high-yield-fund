@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 
-import InvestorDashboard from "@/src/components/InvestorDashboard";
-import InvestorRegistry from "@/src/components/InvestorRegistry";
-import ManagerStatements from "@/src/components/ManagerStatements";
+import ClientDashboard from "@/src/components/InvestorDashboard";
+import ClientRegistry from "@/src/components/InvestorRegistry";
+import SponsorStatements from "@/src/components/ManagerStatements";
 import MorningWire from "@/src/components/MorningWire";
 import Navbar, { type Role } from "@/src/components/Navbar";
 import PositionInputs from "@/src/components/PositionInputs";
 import StressEngine from "@/src/components/StressEngine";
 import Validation from "@/src/components/Validation";
-import { INP, INVESTORS, type FundInputs } from "@/src/lib/data";
+import { CLIENTS, INP, type FundInputs } from "@/src/lib/data";
 
 function cloneInputs(inputs: FundInputs): FundInputs {
   return Object.fromEntries(
@@ -19,8 +19,8 @@ function cloneInputs(inputs: FundInputs): FundInputs {
 }
 
 export default function Home() {
-  const [role, setRole] = useState<Role>("manager");
-  const [selectedInvestorId, setSelectedInvestorId] = useState(INVESTORS[0].id);
+  const [role, setRole] = useState<Role>("sponsor");
+  const [selectedClientId, setSelectedClientId] = useState(CLIENTS[0].id);
   const [inputs, setInputs] = useState<FundInputs>(() => cloneInputs(INP));
 
   return (
@@ -31,20 +31,29 @@ export default function Home() {
       <Navbar
         role={role}
         onRoleChange={setRole}
-        selectedInvestorId={selectedInvestorId}
-        onInvestorChange={setSelectedInvestorId}
+        selectedClientId={selectedClientId}
+        onClientChange={setSelectedClientId}
       />
-      {role === "manager" ? (
+      {role === "sponsor" || role === "internal" || role === "investor" ? (
         <>
+          {role === "investor" ? (
+            <section className="p-5">
+              <div className="mb-[3px] text-lg font-medium">Investor Portal</div>
+              <div className="mb-5 text-[13px] text-text-secondary">
+                Outside capital partner view. Investor capital waterfall and upside allocations are
+                reflected in the sponsor dashboard metrics below.
+              </div>
+            </section>
+          ) : null}
           <MorningWire inputs={inputs} />
           <PositionInputs inputs={inputs} setInputs={setInputs} />
           <StressEngine inputs={inputs} />
-          <InvestorRegistry />
-          <ManagerStatements />
+          <ClientRegistry />
+          <SponsorStatements />
           <Validation inputs={inputs} />
         </>
       ) : (
-        <InvestorDashboard investorId={selectedInvestorId} />
+        <ClientDashboard clientId={selectedClientId} />
       )}
     </main>
   );
